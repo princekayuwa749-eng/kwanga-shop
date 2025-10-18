@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Kwanga Shop</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <style>
+        /* Chat flottant */
+        #chat-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 30px;
+            z-index: 9999;
+        }
+
+        #chat-widget {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 360px;
+            height: 470px;
+            border-radius: 15px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+            background: white;
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+        }
+
+        #chat-header {
+            background: #007bff;
+            color: white;
+            padding: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        #chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background: #f1f1f1;
+        }
+
+        #chat-form {
+            display: flex;
+            border-top: 1px solid #ccc;
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+        }
+
+        #chat-form button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        /* Styles bulles */
+        .message-container {
+            display: flex;
+            align-items: flex-end;
+            margin: 8px 0;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 8px 12px;
+            border-radius: 15px;
+            word-wrap: break-word;
+            font-size: 14px;
+            position: relative;
+        }
+        .message-sent {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+            text-align: right;
+        }
+        .message-received {
+            background: #e4e6eb;
+            color: black;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+            text-align: left;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin: 0 8px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+        }
+        .message-time {
+            font-size: 11px;
+            color: #777;
+            display: block;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Bouton toggle -->
+<div id="chat-toggle">💬</div>
+
+<!-- Fenêtre Chat -->
+<div id="chat-widget">
+    <div id="chat-header">
+        Message
+        <span id="chat-close" style="cursor:pointer;">❌</span>
+    </div>
+    <div id="chat-messages"></div>
+    <form id="chat-form">
+        {% csrf_token %}
+        <input type="text" id="chat-input" placeholder="Écris un message...">
+        <button type="submit">Envoyer</button>
+    </form>
+</div>
+
+<script>
+$(document).ready(function(){
+    const chatToggle = $('#chat-toggle');
+    const chatWidget = $('#chat-widget');
+    const chatClose = $('#chat-close');
+    const messagesDiv = $('#chat-messages');
+    const chatInput = $('#chat-input');
+
+    // Ouvrir / fermer le chat
+    chatToggle.click(()=> chatWidget.show());
+    chatClose.click(()=> chatWidget.hide());
+
+    // Envoi du message
+    $('#chat-form').submit(function(e){
+        e.preventDefault();
+        const contenu = chatInput.val().trim();
+        if(!contenu) return;
+
+        $.ajax({
+            url: "{% url 'send_message' %}",
+            type: "POST",
+            data: {
+                'contenu': contenu,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(data){
+                chatInput.val('');
+                loadMessages();
+            }
+        });
+    });
+
+    // Charger tous les messages
+    function loadMessages(){
+        $.ajax({
+            url: "{% url 'get_messages' %}",
+            type: "GET",
+            success: function(data){
+                messagesDiv.empty();
+                data.forEach(m => {
+                    const container = $('<div>').addClass('message-container');
+                    const bubble = $('<div>').addClass('message-bubble');
+                    const avatar = $('<img>').addClass('avatar');
+
+                    if(m.expediteur === '{{ request.user.username }}'){
+                        bubble.addClass('message-sent');
+                        avatar.attr('src', "{{ request.user.profile.image.url|default:'/static/img/default-avatar.png' }}");
+                        container.css('flex-direction','row-reverse');
+                    } else {
+                        bubble.addClass('message-received');
+                        avatar.attr('src','/static/img/default-avatar.png');
+                    }
+
+                    bubble.html(`<b>${m.expediteur}</b><br>${m.contenu}<br><span class="message-time">${m.date_envoi}</span>`);
+                    container.append(avatar).append(bubble);
+                    messagesDiv.append(container);
+                });
+                messagesDiv.scrollTop(messagesDiv[0].scrollHeight);
+            }
+        });
+    }
+
+    // Rafraîchissement toutes les 2 secondes
+    setInterval(loadMessages, 2000);
+    loadMessages();
+});
+</script>
+
+</body>
+</html>

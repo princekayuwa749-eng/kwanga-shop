@@ -1,0 +1,29 @@
+{% extends "ventes/base.html" %}
+{% block content %}
+
+<h2>Produits disponibles</h2>
+
+<div class="produits">
+    {% for product in products %}
+        <div class="carte-produit">
+            <a href="{{ product.get_absolute_url }}">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.nom }}" class="product-image">
+                {% endif %}
+                <h3>{{ product.nom }}</h3>
+            </a>
+            <p class="price">Prix : {{ product.prix }} CDF</p>
+            <p class="stock">Stock : {{ product.stock }}</p>
+
+            <form action="{% url 'ajouter_au_panier' product.id %}" method="post">
+                {% csrf_token %}
+                <input type="number" name="quantite" value="1" min="1">
+                <button type="submit" class="btn btn-primary">Ajouter au panier</button>
+            </form>
+        </div>
+    {% empty %}
+        <p>Aucun produit disponible pour le moment.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}

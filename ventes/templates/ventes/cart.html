@@ -1,0 +1,50 @@
+{% extends 'ventes/base.html' %}
+{% load static %}
+
+{% block title %}Panier{% endblock %}
+
+{% block content %}
+<div class="cart-container">
+    <h1>Votre Panier</h1>
+
+    {% if items %}
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Prix Unitaire</th>
+                <th>Quantité</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.produit.nom }}</td>
+                <td>{{ item.produit.prix }} CDF</td>
+                <td>{{ item.quantite }}</td>
+                <td>{{ item.prix_total }} CDF</td>
+                <td>
+                    <a href="{% url 'retirer_du_panier' item.produit.id %}" class="btn btn-remove">Supprimer</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="cart-total">
+        <strong>Total : </strong> {{ total }} CDF
+    </div>
+
+    <div class="cart-actions">
+        <a href="{% url 'liste_produits' %}" class="btn btn-primary">Voir les produits</a>
+        <a href="{% url 'checkout' %}" class="btn btn-success">Passer à la commande</a>
+    </div>
+
+    {% else %}
+    <p>Votre panier est vide.</p>
+    <a href="{% url 'liste_produits' %}" class="btn btn-primary">Voir les produits</a>
+    {% endif %}
+</div>
+{% endblock %}

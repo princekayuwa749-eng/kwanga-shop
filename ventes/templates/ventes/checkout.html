@@ -1,0 +1,10 @@
+{% extends "ventes/base.html" %}
+{% block content %}
+<h2>Passer la commande</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Confirmer la commande</button>
+</form>
+<a href="{% url 'cart' %}">Retour au panier</a>
+{% endblock %}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+{% load static %}
+{% include 'chat/chat_widget.html' %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kwanga Shop</title>
+
+    <!-- Montserrat depuis Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+<header>
+    <div class="header-container">
+        <!-- 🔹 Logo à gauche -->
+        <a href="{% url 'liste_produits' %}" class="logo-link">
+            <img src="{% static 'images/logo.png' %}" alt="Kwanga Shop Logo" class="logo">
+        </a>
+
+        <!-- 🔹 Nom du site -->
+        <h1><a href="{% url 'liste_produits' %}" class="site-title">Kwanga Shop</a></h1>
+
+        <!-- 🔹 Navigation -->
+        <nav>
+            <a href="{% url 'cart' %}">Panier ({{ cart_item_count|default:0 }})</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    <p>&copy; 2025 Kwanga Shop | Tous droits réservés</p>
+</footer>
+
+<!-- Script d’animation (fade-in / fade-out) -->
+<script>
+    window.addEventListener('load', () => {
+        document.body.classList.add('loaded');
+    });
+
+    const links = document.querySelectorAll('a');
+    links.forEach(link => {
+        if (link.hostname === window.location.hostname) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.href;
+                document.body.classList.remove('loaded');
+                setTimeout(() => {
+                    window.location.href = href;
+                }, 500);
+            });
+        }
+    });
+</script>
+</body>
+</html>

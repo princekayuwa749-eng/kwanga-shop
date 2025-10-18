@@ -1,0 +1,143 @@
+<script>
+// Sélecteurs
+const chatToggle = document.getElementById('chat-toggle');
+const chatWidget = document.getElementById('chat-widget');
+const chatClose = document.getElementById('chat-close');
+const chatSend = document.getElementById('chat-send');
+const input = document.getElementById('chat-input');
+const messagesDiv = document.getElementById('chat-messages');
+const chatSound = document.getElementById('chat-sound');
+const chatBadge = document.getElementById('chat-badge');
+const emojiToggle = document.getElementById('emoji-toggle');
+const emojiPicker = document.getElementById('emoji-picker');
+const emojiSearch = document.getElementById('emoji-search');
+
+let lastMessageCount = 0;
+let unreadCount = 0;
+const localKey = 'chat_messages_local';
+
+// Liste des emojis
+const emojis = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺"];
+
+// Afficher barre emojis
+function fillEmojiPicker(filter=''){
+    emojiPicker.innerHTML='';
+    emojis.filter(e=>e.includes(filter)).forEach(e=>{
+        const span = document.createElement('span');
+        span.classList.add('emoji');
+        span.innerText = e;
+        emojiPicker.appendChild(span);
+    });
+}
+fillEmojiPicker();
+
+// Ouvrir/fermer chat
+chatToggle.addEventListener('click', ()=>{
+    chatWidget.style.bottom='80px';
+    unreadCount=0;
+    chatBadge.style.display='none';
+});
+chatClose.addEventListener('click', ()=>chatWidget.style.bottom='-100%');
+
+// Emojis
+emojiToggle.addEventListener('click', ()=>{
+    if(emojiPicker.style.display==='flex'){
+        emojiPicker.style.display='none';
+        emojiSearch.style.display='none';
+    } else {
+        emojiPicker.style.display='flex';
+        emojiPicker.style.flexWrap='wrap';
+        emojiSearch.style.display='block';
+    }
+});
+emojiSearch.addEventListener('input', ()=>fillEmojiPicker(emojiSearch.value));
+emojiPicker.addEventListener('click', e=>{
+    if(e.target.classList.contains('emoji')){
+        input.value+=e.target.innerText;
+        input.focus();
+    }
+});
+
+// Afficher message local
+function addLocalMessage(username, contenu, time, sent=true){
+    const container = document.createElement('div');
+    container.classList.add('message-container');
+
+    const bubble = document.createElement('div');
+    bubble.classList.add('message-bubble', sent?'message-sent':'message-received');
+
+    const avatar = document.createElement('img');
+    avatar.classList.add('avatar');
+    avatar.src = sent ? "{{ request.user.profile.image.url|default:'/static/img/default-avatar.png' }}" : "/static/img/default-avatar.png";
+
+    container.style.flexDirection = sent?'row-reverse':'row';
+    bubble.innerHTML=`<b>${username}</b><br>${contenu}<br><span class="message-time">${time}</span>`;
+    container.appendChild(avatar);
+    container.appendChild(bubble);
+    messagesDiv.appendChild(container);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Sauvegarde dans localStorage
+function saveToLocal(contenu){
+    const stored = JSON.parse(localStorage.getItem(localKey)||'[]');
+    stored.push({username:"{{ request.user.username }}", contenu:contenu, time:new Date().toLocaleTimeString()});
+    localStorage.setItem(localKey, JSON.stringify(stored));
+}
+
+// Charger messages locaux
+function loadLocalMessages(){
+    const stored = JSON.parse(localStorage.getItem(localKey)||'[]');
+    stored.forEach(msg=>addLocalMessage(msg.username, msg.contenu, msg.time));
+}
+
+// Charger messages serveur
+function loadMessages(){
+    fetch("{% url 'get_messages' %}")
+    .then(res=>res.json())
+    .then(data=>{
+        messagesDiv.innerHTML='';
+        loadLocalMessages(); // afficher messages locaux d'abord
+
+        data.forEach(m=>{
+            if(m.expediteur!== "{{ request.user.username }}"){
+                addLocalMessage(m.expediteur, m.contenu, m.date_envoi, false);
+            }
+        });
+
+        // Notifications
+        const total = data.length;
+        if(total>lastMessageCount && chatWidget.style.bottom==='-100%'){
+            chatSound.play();
+            unreadCount += total - lastMessageCount;
+            chatBadge.style.display='flex';
+            chatBadge.innerText=unreadCount;
+        }
+        lastMessageCount=total;
+    });
+}
+
+// Envoyer message
+chatSend.addEventListener('click', ()=>{
+    const contenu = input.value.trim();
+    if(!contenu) return;
+    addLocalMessage("{{ request.user.username }}", contenu, new Date().toLocaleTimeString());
+    saveToLocal(contenu);
+    input.value='';
+
+    fetch("{% url 'send_message' %}", {
+        method:'POST',
+        headers:{'X-CSRFToken':'{{ csrf_token }}'},
+        body: new URLSearchParams({'contenu': contenu})
+    }).then(res=>res.json()).then(data=>{
+        if(data.status!=='ok') alert('Erreur serveur');
+    });
+});
+
+// Enter pour envoyer
+input.addEventListener('keypress', e=>{if(e.key==='Enter'){e.preventDefault(); chatSend.click();}});
+
+// Lancer rafraîchissement
+setInterval(loadMessages,2000);
+loadMessages();
+</script>
